@@ -1,0 +1,25 @@
+#include <stdio.h>
+#include <omp.h>
+
+int main() {
+    int n = 10; 
+
+    #pragma omp parallel num_threads(2)
+    {
+        int thread_id = omp_get_thread_num();
+
+        if (thread_id == 0) {
+            printf("Thread %d: Series of 2\n", thread_id);
+            for (int i = 1; i <= n; i++) {
+                printf("Thread %d: %d\n", thread_id, 2 * i);
+            }
+        } else if (thread_id == 1) {
+            printf("Thread %d: Series of 4\n", thread_id);
+            for (int i = 1; i <= n; i++) {
+                printf("Thread %d: %d\n", thread_id, 4 * i);
+            }
+        }
+    }
+
+    return 0;
+}
