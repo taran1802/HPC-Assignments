@@ -1,0 +1,38 @@
+#include <mpi.h>
+#include <stdio.h>
+
+int main(int argc, char** argv) {
+    int rank, size;
+    int numbers[2]; // Array to hold two numbers per process
+    MPI_Status status;
+
+    // Initialize the MPI environment
+    MPI_Init(&argc, &argv);
+
+    // Get the rank of the process
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    // Get the total number of processes
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    if (rank != 0) {
+        // Non-root processes initialize their numbers
+        numbers[0] = rank * 2;       // Example calculation for the first number
+        numbers[1] = rank * 2 + 1;   // Example calculation for the second number
+
+        // Send the two numbers to the root process
+        MPI_Send(numbers, 2, MPI_INT, 0, 0, MPI_COMM_WORLD);
+    } else {
+        // Root process collects and prints the numbers
+        printf("Root process collecting numbers from other processes:\n");
+        for (int i = 1; i < size; i++) {
+            MPI_Recv(numbers, 2, MPI_INT, i, 0, MPI_COMM_WORLD, &status);
+            printf("Received from process %d: %d, %d\n", i, numbers[0], numbers[1]);
+        }
+    }
+
+    // Finalize the MPI environment
+    MPI_Finalize();
+
+    return 0;
+}
