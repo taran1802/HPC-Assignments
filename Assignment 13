@@ -1,0 +1,99 @@
+#include <cuda_runtime.h>
+#include <stdio.h>
+
+#define N 16  // Matrix dimensions (N x N)
+
+__global__ void matrixAddKernel(float* A, float* B, float* C, int size) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        C[idx] = A[idx] + B[idx];
+    }
+}
+
+void initializeMatrix(float* matrix, int size, float value) {
+    for (int i = 0; i < size; i++) {
+        matrix[i] = value + i;
+    }
+}
+
+void printMatrix(float* matrix, int rows, int cols) {
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            printf("%.1f ", matrix[i * cols + j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+int main() {
+    const int size = N * N;
+    const int bytes = size * sizeof(float);
+
+    // Host matrices
+    float *h_A1, *h_B1, *h_C1, *h_A2, *h_B2, *h_C2;
+
+    h_A1 = (float*)malloc(bytes);
+    h_B1 = (float*)malloc(bytes);
+    h_C1 = (float*)malloc(bytes);
+    h_A2 = (float*)malloc(bytes);
+    h_B2 = (float*)malloc(bytes);
+    h_C2 = (float*)malloc(bytes);
+
+    // Initialize matrices
+    initializeMatrix(h_A1, size, 1.0f);  // First matrix A1
+    initializeMatrix(h_B1, size, 2.0f);  // First matrix B1
+    initializeMatrix(h_A2, size, 3.0f);  // Second matrix A2
+    initializeMatrix(h_B2, size, 4.0f);  // Second matrix B2
+
+    // Print input matrices
+    printf("Matrix A1:\n");
+    printMatrix(h_A1, N, N);
+    printf("Matrix B1:\n");
+    printMatrix(h_B1, N, N);
+    printf("Matrix A2:\n");
+    printMatrix(h_A2, N, N);
+    printf("Matrix B2:\n");
+    printMatrix(h_B2, N, N);
+
+    // Device matrices
+    float *d_A1, *d_B1, *d_C1, *d_A2, *d_B2, *d_C2;
+
+    cudaMalloc((void**)&d_A1, bytes);
+    cudaMalloc((void**)&d_B1, bytes);
+    cudaMalloc((void**)&d_C1, bytes);
+    cudaMalloc((void**)&d_A2, bytes);
+    cudaMalloc((void**)&d_B2, bytes);
+    cudaMalloc((void**)&d_C2, bytes);
+
+    // Copy data to device
+    cudaMemcpy(d_A1, h_A1, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_B1, h_B1, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_A2, h_A2, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_B2, h_B2, bytes, cudaMemcpyHostToDevice);
+
+    // Launch kernels
+    int threadsPerBlock = 256;
+    int blocksPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
+
+    matrixAddKernel<<<blocksPerGrid, threadsPerBlock>>>(d_A1, d_B1, d_C1, size);
+    matrixAddKernel<<<blocksPerGrid, threadsPerBlock>>>(d_A2, d_B2, d_C2, size);
+
+    // Copy results back to host
+    cudaMemcpy(h_C1, d_C1, bytes, cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_C2, d_C2, bytes, cudaMemcpyDeviceToHost);
+
+    // Print results
+    printf("Result of A1 + B1:\n");
+    printMatrix(h_C1, N, N);
+    printf("Result of A2 + B2:\n");
+    printMatrix(h_C2, N, N);
+
+    // Free memory
+    free(h_A1); free(h_B1); free(h_C1);
+    free(h_A2); free(h_B2); free(h_C2);
+    cudaFree(d_A1); cudaFree(d_B1); cudaFree(d_C1);
+    cudaFree(d_A2); cudaFree(d_B2); cudaFree(d_C2);
+
+    return 0;
+}
